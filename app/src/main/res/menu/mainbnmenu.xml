@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android">
+    <item
+        android:id="@+id/stat"
+        android:icon = "@drawable/ic_stat"
+        android:title="Statistics"
+        />
+    <item
+        android:id="@+id/updates"
+        android:icon = "@drawable/ic_article"
+        android:title="Updates"
+        />
+    <item
+        android:id="@+id/myth"
+        android:icon = "@drawable/ic_book"
+        android:title="Myth Busters"
+        />
+    <item
+        android:id="@+id/advice"
+        android:icon = "@drawable/ic_shout"
+        android:title="Advice"
+        />
+</menu>
