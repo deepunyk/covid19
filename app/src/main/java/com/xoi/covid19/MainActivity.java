@@ -94,7 +94,7 @@ public class MainActivity extends AppCompatActivity implements PopupMenu.OnMenuI
                         finish();
                         break;
                     case R.id.map:
-                        Intent go4 = new Intent(MainActivity.this, MapsActivity.class);
+                        Intent go4 = new Intent(MainActivity.this, MapMainActivity.class);
                         startActivity(go4);
                         finish();
                         break;

@@ -1,13 +1,17 @@
 package com.xoi.covid19;
 
 import androidx.appcompat.app.AppCompatActivity;
+import androidx.constraintlayout.widget.ConstraintLayout;
 
+import android.app.Activity;
 import android.content.Intent;
 import android.os.Bundle;
 import android.os.Handler;
 import android.view.View;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.LinearLayout;
 import android.widget.Toast;
 
 import com.android.volley.DefaultRetryPolicy;
@@ -27,12 +31,15 @@ import studio.carbonylgroup.textfieldboxes.ExtendedEditText;
 
 public class addCommodityActivity extends AppCompatActivity {
 
-    ExtendedEditText nameTxt;
-    MaterialSpinner typeSpin;
-    String typeArr[] = {"Grocery","Milk","Hospital"};
+    ExtendedEditText nameTxt, addTxt;
+    MaterialSpinner typeSpin, distSpin;
+    String typeArr[] = {"Grocery","Milk","Clinic","ATM","Pharmacy"};
+    String districtArr[] = {"Udupi","Mangalore","Bangalore"};
     Button addBut;
-    String name, type, lat,lon, url = "http://xtoinfinity.tech/maps/addLocation.php";
+    String name, type, lat,lon, address, district, url = "http://xtoinfinity.tech/maps/addLoc.php";
     ImageView navImg;
+    ConstraintLayout parent_layout;
+    LinearLayout linear_layout;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -41,13 +48,47 @@ public class addCommodityActivity extends AppCompatActivity {
 
         lat = getIntent().getStringExtra("lat");
         lon = getIntent().getStringExtra("long");
+        address = getIntent().getStringExtra("add");
 
         addBut = (Button)findViewById(R.id.addBut);
         nameTxt = (ExtendedEditText)findViewById(R.id.nameTxt);
+        addTxt = (ExtendedEditText)findViewById(R.id.addTxt);
         typeSpin = (MaterialSpinner)findViewById(R.id.typeSpin);
+        distSpin = (MaterialSpinner)findViewById(R.id.distSpin);
+        parent_layout = (ConstraintLayout) findViewById(R.id.parent_layout);
+        linear_layout = (LinearLayout) findViewById(R.id.linear_layout);
         typeSpin.setItems(typeArr);
+        distSpin.setItems(districtArr);
+        addTxt.setText(address);
 
         navImg = (ImageView)findViewById(R.id.navImg);
+
+        parent_layout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hideKeyboard(addCommodityActivity.this);
+            }
+        });
+        linear_layout.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hideKeyboard(addCommodityActivity.this);
+            }
+        });
+
+        typeSpin.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hideKeyboard(addCommodityActivity.this);
+            }
+        });
+
+        distSpin.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                hideKeyboard(addCommodityActivity.this);
+            }
+        });
 
         navImg.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -76,12 +117,11 @@ public class addCommodityActivity extends AppCompatActivity {
                     Toast.makeText(addCommodityActivity.this, "Please enter the name", Toast.LENGTH_SHORT).show();
                 }else {
                     type = typeArr[typeSpin.getSelectedIndex()];
+                    district = districtArr[distSpin.getSelectedIndex()];
                     addCom();
                 }
             }
         });
-
-
     }
 
     public void addCom(){
@@ -90,12 +130,13 @@ public class addCommodityActivity extends AppCompatActivity {
                     @Override
                     public void onResponse(String response) {
                         Toast.makeText(addCommodityActivity.this, "Added successfully, thank you for your support", Toast.LENGTH_SHORT).show();
-                        Intent go = new Intent(addCommodityActivity.this, MapsActivity.class);
+                        Intent go = new Intent(addCommodityActivity.this, MapMainActivity.class);
                         startActivity(go);
                         finish();
                     }
                 },
                 new Response.ErrorListener() {
+            
                     @Override
                     public void onErrorResponse(VolleyError error) {
                         Toast.makeText(addCommodityActivity.this, ""+error, Toast.LENGTH_SHORT).show();
@@ -109,6 +150,8 @@ public class addCommodityActivity extends AppCompatActivity {
                 params.put("name",name);
                 params.put("lat",lat);
                 params.put("long",lon);
+                params.put("dist",district);
+                params.put("add",address);
                 return params;
             };
 
@@ -125,5 +168,16 @@ public class addCommodityActivity extends AppCompatActivity {
         Intent go = new Intent(addCommodityActivity.this, MainActivity.class);
         startActivity(go);
         finish();
+    }
+
+    public static void hideKeyboard(Activity activity) {
+        InputMethodManager imm = (InputMethodManager) activity.getSystemService(Activity.INPUT_METHOD_SERVICE);
+        //Find the currently focused view, so we can grab the correct window token from it.
+        View view = activity.getCurrentFocus();
+        //If no view currently has focus, create a new one, just so we can grab a window token from it
+        if (view == null) {
+            view = new View(activity);
+        }
+        imm.hideSoftInputFromWindow(view.getWindowToken(), 0);
     }
 }

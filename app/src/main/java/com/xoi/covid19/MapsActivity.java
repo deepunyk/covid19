@@ -60,6 +60,7 @@ import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
@@ -76,15 +77,14 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     ArrayList<String> nameArr = new ArrayList<>();
     ArrayList<String> latArr = new ArrayList<>();
     ArrayList<String> longArr = new ArrayList<>();
-    ArrayList<String> openArr = new ArrayList<>();
-    ArrayList<String> closeArr = new ArrayList<>();
+    ArrayList<String> addArr = new ArrayList<>();
     ArrayList<String> typeArr = new ArrayList<>();
-    String url = "http://xtoinfinity.tech/maps/getMaps.php";
+    String url = "http://xtoinfinity.tech/maps/getMap.php";
     String city = "";
-    FloatingActionButton fab, locFab, helpFab, upFab;
+    FloatingActionButton fab, locFab, helpFab;
     ImageView navImg;
     Button confirmBut;
-    CardView toolCard, navCard;
+    CardView toolCard;
     int check = 0;
     SpinKitView loadSpin;
     TextView loadTxt;
@@ -102,25 +102,29 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         loadSpin = (SpinKitView) findViewById(R.id.loadSpin);
         loadTxt = (TextView) findViewById(R.id.loadTxt);
 
+        doneLoad();
+
         navImg = (ImageView)findViewById(R.id.navImg);
         fab = (FloatingActionButton)findViewById(R.id.fab);
         locFab = (FloatingActionButton)findViewById(R.id.locFab);
         helpFab = (FloatingActionButton)findViewById(R.id.helpFab);
-        upFab = (FloatingActionButton)findViewById(R.id.upFab);
         confirmBut = (Button)findViewById(R.id.confirmBut);
-        navCard = (CardView) findViewById(R.id.navCard);
         toolCard = (CardView) findViewById(R.id.toolCard);
 
-        helpFab.hide();
 
-        upFab.setOnClickListener(new View.OnClickListener() {
+        fab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                navCard.setVisibility(View.GONE);
-                upFab.hide();
-                helpFab.show();
+                fab.hide();
+                locFab.hide();
+                helpFab.hide();
+                check = 1;
+                toolCard.setVisibility(View.VISIBLE);
+                userMarker.setVisible(true);
             }
         });
+
+        helpFab.hide();
 
         locFab.setOnClickListener(new View.OnClickListener() {
             @Override
@@ -132,22 +136,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         helpFab.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
-                navCard.setVisibility(View.VISIBLE);
-                upFab.show();
                 helpFab.hide();
-            }
-        });
-        fab.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View v) {
-                upFab.hide();
-                navCard.setVisibility(View.GONE);
-                fab.hide();
-                locFab.hide();
-                helpFab.hide();
-                check = 1;
-                toolCard.setVisibility(View.VISIBLE);
-                userMarker.setVisible(true);
             }
         });
 
@@ -171,9 +160,20 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
         confirmBut.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View v) {
+                String address = "";
                 Intent go = new Intent(MapsActivity.this, addCommodityActivity.class);
                 go.putExtra("lat", selectLat.toString());
                 go.putExtra("long", selectLong.toString());
+                Geocoder geocoder;
+                List<Address> addresses;
+                geocoder = new Geocoder(MapsActivity.this, Locale.getDefault());
+                try {
+                    addresses = geocoder.getFromLocation(selectLat, selectLong, 1);
+                    address = addresses.get(0).getAddressLine(0);
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                go.putExtra("add", address);
                 startActivity(go);
                 finish();
             }
@@ -184,7 +184,27 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-        getLastLocation();
+
+        Bundle extras = getIntent().getExtras();
+        if(extras !=null) {
+            userLat = extras.getDouble("userLat");
+            userLong = extras.getDouble("userLong");
+            nameArr = extras.getStringArrayList("name");
+            typeArr = extras.getStringArrayList("ser");
+            latArr = extras.getStringArrayList("lat");
+            longArr = extras.getStringArrayList("long");
+            addArr = extras.getStringArrayList("add");
+            setMarkers();
+            BitmapDescriptor food = BitmapDescriptorFactory.fromResource(R.drawable.mapuser);
+            userLatLng = new LatLng(userLat, userLong);
+            usermo = new MarkerOptions().position(userLatLng);
+            userMarker = mMap.addMarker(usermo.icon(food).title("Your current location"));
+            userMarker.setPosition(userLatLng);
+            mMap.moveCamera(CameraUpdateFactory.newLatLngZoom(userLatLng,18));
+            if(extras.getString("action").equals("add")){
+                fab.callOnClick();
+            }
+        }
 
         mMap.setOnMapClickListener(new GoogleMap.OnMapClickListener() {
             @Override
@@ -204,47 +224,28 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
             }
         });
-        getDetails();
+
     }
 
-
-    private void getDetails(){
-        load();
-        StringRequest stringRequest = new StringRequest(Request.Method.GET, url,
-                new Response.Listener<String>() {
-                    @Override
-                    public void onResponse(String response) {
-                        parseItems(response);
-                    }
-                },
-
-                new Response.ErrorListener() {
-                    @Override
-                    public void onErrorResponse(VolleyError error) {
-                        doneLoad();
-                        Toast.makeText(MapsActivity.this, ""+error, Toast.LENGTH_SHORT).show();
-                    }
-                }
-        );
-        int socketTimeOut = 50000;
-        RetryPolicy policy = new DefaultRetryPolicy(socketTimeOut, 0, DefaultRetryPolicy.DEFAULT_BACKOFF_MULT);
-        stringRequest.setRetryPolicy(policy);
-        RequestQueue queue = Volley.newRequestQueue(MapsActivity.this);
-        queue.add(stringRequest);
-    }
 
     private void setMarkers(){
         BitmapDescriptor milk = BitmapDescriptorFactory.fromResource(R.drawable.milk);
-        BitmapDescriptor hospital = BitmapDescriptorFactory.fromResource(R.drawable.hospital);
+        BitmapDescriptor health = BitmapDescriptorFactory.fromResource(R.drawable.health);
         BitmapDescriptor food = BitmapDescriptorFactory.fromResource(R.drawable.groceries);
+        BitmapDescriptor atm = BitmapDescriptorFactory.fromResource(R.drawable.atm);
+        BitmapDescriptor pharmacy = BitmapDescriptorFactory.fromResource(R.drawable.drug);
 
             for (int i = 0; i < nameArr.size(); i++) {
                 try {
                 LatLng mark = new LatLng(Double.parseDouble(latArr.get(i)), Double.parseDouble(longArr.get(i)));
                 if (typeArr.get(i).equals("Milk")) {
                     mMap.addMarker(new MarkerOptions().position(mark).title(nameArr.get(i)).icon(milk));
-                } else if (typeArr.get(i).equals("Hospital")) {
-                    mMap.addMarker(new MarkerOptions().position(mark).title(nameArr.get(i)).icon(hospital));
+                } else if (typeArr.get(i).equals("Clinic")) {
+                    mMap.addMarker(new MarkerOptions().position(mark).title(nameArr.get(i)).icon(health));
+                }else if (typeArr.get(i).equals("ATM")) {
+                    mMap.addMarker(new MarkerOptions().position(mark).title(nameArr.get(i)).icon(atm));
+                }else if (typeArr.get(i).equals("Pharmacy")) {
+                    mMap.addMarker(new MarkerOptions().position(mark).title(nameArr.get(i)).icon(pharmacy));
                 } else if (typeArr.get(i).equals("Grocery")) {
                     mMap.addMarker(new MarkerOptions().position(mark).title(nameArr.get(i)).icon(food));
                 } else {
@@ -256,27 +257,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             }
 
     }
-    private void parseItems(String jsonResposnce) {
-        try {
-            JSONObject jobj = new JSONObject(jsonResposnce);
-            JSONArray jarray = jobj.getJSONArray("map");
-            for (int i = 0; i < jarray.length(); i++) {
-                JSONObject jo = jarray.getJSONObject(i);
-                nameArr.add(jo.optString("Name"));
-                typeArr.add(jo.optString("Type"));
-                openArr.add(jo.optString("openTime"));
-                closeArr.add(jo.optString("closeTime"));
-                latArr.add(jo.optString("latitude"));
-                longArr.add(jo.optString("longitude"));
-            }
-            doneLoad();
-            setMarkers();
-        } catch (JSONException e) {
-            e.printStackTrace();
-            Toast.makeText(MapsActivity.this, ""+e, Toast.LENGTH_SHORT).show();
-        }
-    }
-
 
     @SuppressLint("MissingPermission")
     private void getLastLocation(){
@@ -380,7 +360,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
 
     @Override
     public void onBackPressed() {
-        Intent go = new Intent(MapsActivity.this,MainActivity.class);
+        Intent go = new Intent(MapsActivity.this,MapMainActivity.class);
         startActivity(go);
         finish();
     }
